@@ -3,6 +3,8 @@
 Display daily domestic water consumption on a Raspberry Pi with a Pimoroni
 Unicorn HAT Mini.
 
+![Unicorn Water Server control panel](./assets/frontend.jpg)
+
 The project provides:
 
 - A 17x7 water-consumption display designed for Unicorn HAT Mini.
