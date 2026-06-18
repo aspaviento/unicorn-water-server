@@ -40,6 +40,8 @@ cannot be silently cropped or rotated.
 - Water fills the five inner rows from bottom to top.
 - Each 200 litres lights one additional row: `1-200`, `201-400`,
   `401-600`, `601-800`, and `801+`.
+- Values above `999` are accepted, but the matrix displays `999` with red
+  digits as an overflow indicator.
 - Darker blue sits at the bottom, brighter blue at the surface.
 - Small bright pixels at the surface shift between frames to create a subtle
   ripple.
@@ -51,7 +53,7 @@ cannot be silently cropped or rotated.
 | `201-400` | 2 |
 | `401-600` | 3 |
 | `601-800` | 4 |
-| `801-999` | 5 |
+| `801+` | 5 |
 
 ## API
 
@@ -64,7 +66,10 @@ Content-Type: application/json
 {"liters": 30}
 ```
 
-`liters` accepts any number from `0` to `999`. Values are rendered as integers.
+`liters` accepts any non-negative finite number. Values are rendered as
+integers. Values above `999` keep the real `liters` value in the API response,
+but `displayLiters` is capped at `999` and `overflow` is set to `true`; the
+matrix shows red `999` digits.
 
 ### Read Status
 
@@ -72,8 +77,9 @@ Content-Type: application/json
 GET /api/status
 ```
 
-The response includes the current litres, active bucket rows, hardware type,
-display dimensions, rotation, display mode, and last update information.
+The response includes the current litres, displayed litres, overflow state,
+active bucket rows, hardware type, display dimensions, rotation, display mode,
+and last update information.
 
 ### Discover Endpoints
 

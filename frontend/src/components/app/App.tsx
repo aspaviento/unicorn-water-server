@@ -4,6 +4,8 @@ import { content } from '../../content';
 
 type WaterStatus = {
   liters: number;
+  displayLiters: number;
+  overflow: boolean;
   activeRows: number;
   displayMode: 'water' | 'rainbow' | 'off';
 };
@@ -12,6 +14,7 @@ const colors = {
   off: 'rgb(23, 36, 43)',
   outline: 'rgb(190, 235, 255)',
   text: 'rgb(52, 178, 255)',
+  overflow: 'rgb(255, 45, 64)',
   low: 'rgb(0, 72, 145)',
   mid: 'rgb(0, 132, 220)',
   high: 'rgb(38, 186, 255)',
@@ -43,17 +46,23 @@ function activeRowsForLiters(liters: number) {
   return Math.min(5, Math.floor((liters - 1) / 200) + 1);
 }
 
+function displayLitersFor(liters: number) {
+  return Math.min(999, Math.max(0, Math.floor(liters)));
+}
+
 function previewPixels(liters: number, wavePhase: number) {
   const activeRows = activeRowsForLiters(liters);
+  const displayLiters = displayLitersFor(liters);
+  const textColor = liters > 999 ? colors.overflow : colors.text;
   const pixels = Array.from({ length: 17 * 7 }, () => null as string | null);
   const setPixel = (x: number, y: number, color: string) => { pixels[y * 17 + x] = color; };
 
-  String(liters).padStart(3, ' ').split('').forEach((digit, digitIndex) => {
+  String(displayLiters).padStart(3, ' ').split('').forEach((digit, digitIndex) => {
     if (digit === ' ') return;
     const xOffset = digitIndex * 4;
     digits[digit].forEach((row, y) => {
       row.split('').forEach((cell, x) => {
-        if (cell === '1') setPixel(xOffset + x, y + 1, colors.text);
+        if (cell === '1') setPixel(xOffset + x, y + 1, textColor);
       });
     });
   });
@@ -136,7 +145,13 @@ const ApiDocs: React.FunctionComponent = () => (
 );
 
 export function App() {
-  const [status, setStatus] = React.useState<WaterStatus>({ liters: 0, activeRows: 0, displayMode: 'water' });
+  const [status, setStatus] = React.useState<WaterStatus>({
+    liters: 0,
+    displayLiters: 0,
+    overflow: false,
+    activeRows: 0,
+    displayMode: 'water',
+  });
   const [liters, setLiters] = React.useState(0);
   const [message, setMessage] = React.useState('');
   const [error, setError] = React.useState(false);
@@ -197,7 +212,7 @@ export function App() {
         <div className="status-copy">
           <span className="status-kicker">{content.appName}</span>
           <h1>{status.liters}</h1>
-          <p>{content.panel.statusSummary(status.activeRows, status.displayMode)}</p>
+          <p>{content.panel.statusSummary(status.activeRows, status.displayMode, status.overflow)}</p>
         </div>
       </section>
 
@@ -209,7 +224,7 @@ export function App() {
           type="range"
           min="0"
           max="999"
-          value={liters}
+          value={Math.min(liters, 999)}
           onChange={(event) => setLiters(Number(event.target.value))}
         />
         <div className="number-row">
@@ -217,9 +232,8 @@ export function App() {
             aria-label={content.panel.litersInputLabel}
             type="number"
             min="0"
-            max="999"
             value={liters}
-            onChange={(event) => setLiters(Math.max(0, Math.min(999, Number(event.target.value))))}
+            onChange={(event) => setLiters(Math.max(0, Number(event.target.value)))}
           />
           <button onClick={submitWater}>{content.panel.waterSubmit}</button>
         </div>

@@ -11,6 +11,8 @@ class WaterServerTest(unittest.TestCase):
         server.stop_animation()
         server.state.update({
             'liters': 0,
+            'displayLiters': 0,
+            'overflow': False,
             'activeRows': 0,
             'displayMode': 'water',
         })
@@ -36,6 +38,8 @@ class WaterServerTest(unittest.TestCase):
             800: 4,
             801: 5,
             999: 5,
+            1000: 5,
+            1250: 5,
         }
         for liters, rows in expected.items():
             with self.subTest(liters=liters):
@@ -46,9 +50,21 @@ class WaterServerTest(unittest.TestCase):
 
     def test_rejects_invalid_water_values(self):
         self.assertEqual(self.post_water(-1).status_code, 400)
-        self.assertEqual(self.post_water(1000).status_code, 400)
         self.assertEqual(self.client.post('/api/water', json={'liters': True}).status_code, 400)
         self.assertEqual(self.client.post('/api/water', json={'value': 30}).status_code, 400)
+
+    def test_overflow_values_render_999_in_red(self):
+        response = self.post_water(1200)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json['liters'], 1200)
+        self.assertEqual(response.json['displayLiters'], 999)
+        self.assertTrue(response.json['overflow'])
+        self.assertEqual(response.json['activeRows'], 5)
+
+        server.render_display()
+        self.assertEqual(server.unicorn.pixels[0][1], server.TEXT_OVERFLOW)
+        self.assertEqual(server.unicorn.pixels[4][1], server.TEXT_OVERFLOW)
+        self.assertEqual(server.unicorn.pixels[8][1], server.TEXT_OVERFLOW)
 
     def test_status_reports_water_state_and_display_contract(self):
         response = self.client.get('/api/status')
@@ -58,6 +74,8 @@ class WaterServerTest(unittest.TestCase):
         self.assertEqual(response.json['rotation'], 0)
         self.assertEqual(response.json['displayMode'], 'water')
         self.assertEqual(response.json['activeRows'], 0)
+        self.assertEqual(response.json['displayLiters'], 0)
+        self.assertFalse(response.json['overflow'])
 
     def test_api_index_lists_water_endpoints_only(self):
         response = self.client.get('/api/')

@@ -20,6 +20,7 @@ DEFAULT_PORT = 9002
 OFF = (0, 0, 0)
 OUTLINE = (190, 235, 255)
 TEXT_BLUE = (52, 178, 255)
+TEXT_OVERFLOW = (255, 45, 64)
 LOW_BLUE = (0, 72, 145)
 MID_BLUE = (0, 132, 220)
 HIGH_BLUE = (38, 186, 255)
@@ -55,6 +56,8 @@ if (width, height) != (DISPLAY_WIDTH, DISPLAY_HEIGHT):
 
 state = {
     'liters': 0,
+    'displayLiters': 0,
+    'overflow': False,
     'activeRows': 0,
     'displayMode': 'water',
     'lastCalled': None,
@@ -98,9 +101,17 @@ def validate_liters(content):
     value = content.get('liters')
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None, 'liters must be a number'
-    if value < 0 or value > 999:
-        return None, 'liters must be between 0 and 999'
+    if not math.isfinite(value) or value < 0:
+        return None, 'liters must be a non-negative finite number'
     return int(value), None
+
+
+def display_liters(liters):
+    return min(999, max(0, int(liters)))
+
+
+def is_overflow(liters):
+    return int(liters) > 999
 
 
 def active_rows(liters):
@@ -109,13 +120,21 @@ def active_rows(liters):
     return min(5, ((liters - 1) // 200) + 1)
 
 
+def update_water_state(liters):
+    state['liters'] = int(liters)
+    state['displayLiters'] = display_liters(liters)
+    state['overflow'] = is_overflow(liters)
+    state['activeRows'] = active_rows(liters)
+
+
 def set_pixel(x, y, color):
     if 0 <= x < width and 0 <= y < height:
         unicorn.setPixel(x, y, *color)
 
 
-def draw_number(liters):
+def draw_number(liters, overflow=False):
     value = f'{int(liters):>3}'
+    color = TEXT_OVERFLOW if overflow else TEXT_BLUE
     for digit_index, digit in enumerate(value):
         if digit == ' ':
             continue
@@ -123,7 +142,7 @@ def draw_number(liters):
         for y, row in enumerate(DIGITS[digit]):
             for x, cell in enumerate(row):
                 if cell == '1':
-                    set_pixel(x_offset + x, y + 1, TEXT_BLUE)
+                    set_pixel(x_offset + x, y + 1, color)
 
 
 def draw_bucket(rows, wave_phase=0):
@@ -151,13 +170,12 @@ def draw_bucket(rows, wave_phase=0):
 
 
 def render_display(wave_phase=0):
-    rows = active_rows(state['liters'])
-    state['activeRows'] = rows
+    update_water_state(state['liters'])
     with hardware_lock:
         unicorn.clear()
         unicorn.setBrightness(0.5)
-        draw_number(state['liters'])
-        draw_bucket(rows, wave_phase)
+        draw_number(state['displayLiters'], state['overflow'])
+        draw_bucket(state['activeRows'], wave_phase)
         unicorn.show()
 
 
@@ -276,8 +294,7 @@ def api_water():
     liters, error = validate_liters(content)
     if error:
         return make_response(jsonify({'error': error}), 400)
-    state['liters'] = liters
-    state['activeRows'] = active_rows(liters)
+    update_water_state(liters)
     touch('/api/water')
     start_water_display()
     return jsonify(status_payload())
