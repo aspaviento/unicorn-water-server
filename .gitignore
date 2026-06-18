@@ -1,0 +1,8 @@
+.idea
+.venv/
+frontend/node_modules/
+__pycache__/
+*.py[cod]
+.coverage
+.pytest_cache/
+.DS_Store

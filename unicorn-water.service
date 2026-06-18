@@ -1,0 +1,18 @@
+[Unit]
+Description=Unicorn Water Server
+After=network.target busylight.service unicorn-solar.service
+Conflicts=busylight.service unicorn-solar.service
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/unicorn-water-server
+ExecStart=/home/pi/.env/bin/python /home/pi/unicorn-water-server/server.py
+Restart=always
+Environment=FLASK_CONFIG=production
+Environment=UNICORN_WATER_PORT=9002
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
