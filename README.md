@@ -8,7 +8,7 @@ Unicorn HAT Mini.
 The project provides:
 
 - A 17x7 water-consumption display designed for Unicorn HAT Mini.
-- A validated HTTP API for external water-monitoring scripts.
+- A validated HTTP API for external water-monitoring and pool-status scripts.
 - A responsive React control panel with a simulated matrix preview.
 - Built-in API documentation.
 - A systemd service and Raspberry Pi installation scripts.
@@ -42,6 +42,10 @@ cannot be silently cropped or rotated.
   `401-600`, `601-800`, and `801+`.
 - Values above `999` are accepted, but the matrix displays `999` with red
   digits as an overflow indicator.
+- The bottom-left pixel shows pool pH status.
+- The pixel immediately to its right shows pool ORP/chlorine status.
+- Pool status indicators use `ok` as blue, `warning` as yellow, and `critical`
+  as red.
 - Darker blue sits at the bottom, brighter blue at the surface.
 - Small bright pixels at the surface shift between frames to create a subtle
   ripple.
@@ -54,6 +58,22 @@ cannot be silently cropped or rotated.
 | `401-600` | 3 |
 | `601-800` | 4 |
 | `801+` | 5 |
+
+### Pool Chemistry Indicators
+
+Pool chemistry is intentionally represented as a small overlay on the water
+display rather than as a separate display mode. This keeps the domestic water
+consumption view active while allowing hourly pool pH and ORP/chlorine updates.
+
+The recommended classification is:
+
+| Metric | `critical` | `warning` | `ok` |
+|---|---|---|---|
+| pH | `< 6.6` or `> 8.4` | `6.6-7.2` or `7.6-8.4` | `7.2-7.6` |
+| ORP | `< 400` or `> 900` | `400-650` or `750-900` | `650-750` |
+
+Boundary values are included in the less severe band. For example, pH `7.2`
+and `7.6` are `ok`; ORP `650` and `750` are `ok`.
 
 ## API
 
@@ -78,8 +98,25 @@ GET /api/status
 ```
 
 The response includes the current litres, displayed litres, overflow state,
-active bucket rows, hardware type, display dimensions, rotation, display mode,
-and last update information.
+pool indicators, active bucket rows, hardware type, display dimensions,
+rotation, display mode, and last update information.
+
+### Update Pool Chemistry Indicators
+
+```http
+POST /api/pool
+Content-Type: application/json
+
+{
+  "ph": {"status": "warning", "value": 6.9},
+  "orp": {"status": "ok", "value": 697}
+}
+```
+
+`status` accepts `ok`, `warning`, `critical`, or `null`. `value` is optional and
+may be `null`. Sending `null` as the status clears that indicator. This endpoint
+does not change `displayMode`; indicators are rendered only when the display is
+in water mode.
 
 ### Discover Endpoints
 
@@ -186,7 +223,7 @@ npm run build
 ```
 
 The public API is intentionally limited to `/api/`, `/api/status`,
-`/api/water`, `/api/rainbow`, and `/api/off`; solar battery, tariff, and busy
-presence endpoints are not carried over.
+`/api/water`, `/api/pool`, `/api/rainbow`, and `/api/off`; solar battery,
+tariff, and busy presence endpoints are not carried over.
 
 This project was developed with assistance from OpenAI Codex.

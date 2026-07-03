@@ -9,6 +9,11 @@ export const content = {
     waterAriaLabel: (liters: number) => `Daily water consumption: ${liters} litres`,
     statusSummary: (activeRows: number, displayMode: string, overflow: boolean) =>
       `${activeRows} of 5 bucket rows · ${displayMode} display${overflow ? ' · 999+ overflow' : ''}`,
+    poolSummary: (phStatus: string | null, phValue: number | null, orpStatus: string | null, orpValue: number | null) => {
+      const ph = phStatus ? `pH ${phStatus}${phValue === null ? '' : ` (${phValue})`}` : 'pH not set';
+      const orp = orpStatus ? `ORP ${orpStatus}${orpValue === null ? '' : ` (${orpValue} mV)`}` : 'ORP not set';
+      return `${ph} · ${orp}`;
+    },
     waterSection: 'Daily water consumption',
     litersLabel: (liters: number) => `Litres: ${liters}`,
     litersInputLabel: 'Consumed litres',
@@ -39,10 +44,16 @@ export const content = {
         description: 'Updates daily consumed litres. Values above 999 are accepted and displayed as red 999 overflow.',
       },
       {
+        methods: ['POST'],
+        endpoint: '/api/pool',
+        request: '{"ph":{"status":"warning","value":6.9},"orp":{"status":"ok","value":697}}',
+        description: 'Updates pool chemistry indicators. pH uses the lower-left pixel and ORP uses the next pixel. Status accepts ok, warning, critical, or null.',
+      },
+      {
         methods: ['GET'],
         endpoint: '/api/status',
         request: 'None',
-        description: 'Returns litres, displayed litres, overflow state, active bucket rows, display dimensions, rotation, hardware type, and last update information.',
+        description: 'Returns litres, displayed litres, overflow state, pool indicators, active bucket rows, display dimensions, rotation, hardware type, and last update information.',
       },
       {
         methods: ['POST'],

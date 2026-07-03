@@ -14,6 +14,10 @@ class WaterServerTest(unittest.TestCase):
             'displayLiters': 0,
             'overflow': False,
             'activeRows': 0,
+            'pool': {
+                'ph': {'status': None, 'value': None, 'updatedAt': None},
+                'orp': {'status': None, 'value': None, 'updatedAt': None},
+            },
             'displayMode': 'water',
         })
         server.render_display()
@@ -82,6 +86,7 @@ class WaterServerTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         endpoints = response.json['endpoints']
         self.assertEqual(endpoints['water']['path'], '/api/water')
+        self.assertEqual(endpoints['pool']['path'], '/api/pool')
         self.assertEqual(endpoints['off']['path'], '/api/off')
         self.assertEqual(endpoints['rainbow']['path'], '/api/rainbow')
         self.assertEqual(endpoints['status']['path'], '/api/status')
@@ -103,6 +108,35 @@ class WaterServerTest(unittest.TestCase):
         self.assertEqual(server.unicorn.pixels[server.BUCKET_LEFT][6], server.OUTLINE)
         self.assertEqual(server.unicorn.pixels[server.BUCKET_RIGHT][6], server.OUTLINE)
         self.assertNotEqual(server.unicorn.pixels[server.BUCKET_INNER_LEFT][1], server.OFF)
+
+    def test_pool_status_overlays_bottom_left_pixels(self):
+        response = self.client.post('/api/pool', json={
+            'ph': {'status': 'critical', 'value': 8.5},
+            'orp': {'status': 'warning', 'value': 625},
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json['pool']['ph']['status'], 'critical')
+        self.assertEqual(response.json['pool']['ph']['value'], 8.5)
+        self.assertEqual(response.json['pool']['orp']['status'], 'warning')
+        self.assertEqual(response.json['pool']['orp']['value'], 625.0)
+        self.assertEqual(response.json['displayMode'], 'water')
+
+        self.assertEqual(server.unicorn.pixels[0][6], server.POOL_CRITICAL)
+        self.assertEqual(server.unicorn.pixels[1][6], server.POOL_WARNING)
+
+    def test_pool_status_rejects_invalid_values(self):
+        self.assertEqual(self.client.post('/api/pool', json={}).status_code, 400)
+        self.assertEqual(self.client.post('/api/pool', json={'ph': 'critical'}).status_code, 400)
+        self.assertEqual(self.client.post('/api/pool', json={'ph': {'status': 'bad'}}).status_code, 400)
+        self.assertEqual(self.client.post('/api/pool', json={'orp': {'status': 'ok', 'value': True}}).status_code, 400)
+
+    def test_pool_status_does_not_change_non_water_display_mode(self):
+        self.client.post('/api/rainbow', json={'brightness': 0.8, 'speed': 0.01})
+        response = self.client.post('/api/pool', json={'ph': {'status': 'ok', 'value': 7.3}})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json['displayMode'], 'rainbow')
+        self.assertEqual(response.json['pool']['ph']['status'], 'ok')
+        self.assertEqual(server.animation_thread._target, server.display_rainbow)
 
     def test_off_turns_off_every_pixel(self):
         self.post_water(830)

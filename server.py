@@ -21,6 +21,9 @@ OFF = (0, 0, 0)
 OUTLINE = (190, 235, 255)
 TEXT_BLUE = (52, 178, 255)
 TEXT_OVERFLOW = (255, 45, 64)
+POOL_OK = (38, 102, 255)
+POOL_WARNING = (255, 191, 0)
+POOL_CRITICAL = (255, 45, 64)
 LOW_BLUE = (0, 72, 145)
 MID_BLUE = (0, 132, 220)
 HIGH_BLUE = (38, 186, 255)
@@ -30,6 +33,15 @@ BUCKET_LEFT = 12
 BUCKET_RIGHT = 16
 BUCKET_INNER_LEFT = BUCKET_LEFT + 1
 BUCKET_INNER_RIGHT = BUCKET_RIGHT - 1
+POOL_STATUS_PIXELS = {
+    'ph': (0, DISPLAY_HEIGHT - 1),
+    'orp': (1, DISPLAY_HEIGHT - 1),
+}
+POOL_STATUS_COLORS = {
+    'ok': POOL_OK,
+    'warning': POOL_WARNING,
+    'critical': POOL_CRITICAL,
+}
 
 DIGITS = {
     '0': ('111', '101', '101', '101', '111'),
@@ -59,6 +71,10 @@ state = {
     'displayLiters': 0,
     'overflow': False,
     'activeRows': 0,
+    'pool': {
+        'ph': {'status': None, 'value': None, 'updatedAt': None},
+        'orp': {'status': None, 'value': None, 'updatedAt': None},
+    },
     'displayMode': 'water',
     'lastCalled': None,
     'lastCalledApi': None,
@@ -106,6 +122,26 @@ def validate_liters(content):
     return int(value), None
 
 
+def validate_pool_metric(content, name):
+    metric = content.get(name)
+    if metric is None:
+        return None, None
+    if not isinstance(metric, dict):
+        return None, f'{name} must be an object'
+
+    status = metric.get('status')
+    if status not in (*POOL_STATUS_COLORS.keys(), None):
+        return None, f'{name}.status must be ok, warning, critical, or null'
+
+    value = metric.get('value')
+    if value is not None:
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+            return None, f'{name}.value must be a finite number or null'
+        value = float(value)
+
+    return {'status': status, 'value': value}, None
+
+
 def display_liters(liters):
     return min(999, max(0, int(liters)))
 
@@ -125,6 +161,18 @@ def update_water_state(liters):
     state['displayLiters'] = display_liters(liters)
     state['overflow'] = is_overflow(liters)
     state['activeRows'] = active_rows(liters)
+
+
+def update_pool_state(updates):
+    updated_at = datetime.now(timezone.utc).isoformat()
+    for name, metric in updates.items():
+        if metric is None:
+            continue
+        state['pool'][name] = {
+            'status': metric['status'],
+            'value': metric['value'],
+            'updatedAt': updated_at,
+        }
 
 
 def set_pixel(x, y, color):
@@ -169,6 +217,14 @@ def draw_bucket(rows, wave_phase=0):
             set_pixel(x, y, color)
 
 
+def draw_pool_status():
+    for name, metric in state['pool'].items():
+        color = POOL_STATUS_COLORS.get(metric.get('status'))
+        if color is None:
+            continue
+        set_pixel(*POOL_STATUS_PIXELS[name], color)
+
+
 def render_display(wave_phase=0):
     update_water_state(state['liters'])
     with hardware_lock:
@@ -176,6 +232,7 @@ def render_display(wave_phase=0):
         unicorn.setBrightness(0.5)
         draw_number(state['displayLiters'], state['overflow'])
         draw_bucket(state['activeRows'], wave_phase)
+        draw_pool_status()
         unicorn.show()
 
 
@@ -279,6 +336,7 @@ def api_index():
     return jsonify({
         'endpoints': {
             'off': {'methods': ['GET', 'POST'], 'path': '/api/off'},
+            'pool': {'methods': ['POST'], 'path': '/api/pool'},
             'rainbow': {'methods': ['POST'], 'path': '/api/rainbow'},
             'status': {'methods': ['GET'], 'path': '/api/status'},
             'water': {'methods': ['POST'], 'path': '/api/water'},
@@ -297,6 +355,29 @@ def api_water():
     update_water_state(liters)
     touch('/api/water')
     start_water_display()
+    return jsonify(status_payload())
+
+
+@app.route('/api/pool', methods=['POST'])
+def api_pool():
+    content, error_response = read_json_body()
+    if error_response is not None:
+        return error_response
+
+    updates = {}
+    for name in POOL_STATUS_PIXELS:
+        metric, error = validate_pool_metric(content, name)
+        if error:
+            return make_response(jsonify({'error': error}), 400)
+        updates[name] = metric
+
+    if all(metric is None for metric in updates.values()):
+        return make_response(jsonify({'error': 'At least one of ph or orp is required'}), 400)
+
+    update_pool_state(updates)
+    touch('/api/pool')
+    if state['displayMode'] == 'water':
+        render_display()
     return jsonify(status_payload())
 
 

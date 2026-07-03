@@ -7,7 +7,21 @@ type WaterStatus = {
   displayLiters: number;
   overflow: boolean;
   activeRows: number;
+  pool: PoolStatus;
   displayMode: 'water' | 'rainbow' | 'off';
+};
+
+type PoolLevel = 'ok' | 'warning' | 'critical' | null;
+
+type PoolMetric = {
+  status: PoolLevel;
+  value: number | null;
+  updatedAt: string | null;
+};
+
+type PoolStatus = {
+  ph: PoolMetric;
+  orp: PoolMetric;
 };
 
 const colors = {
@@ -15,6 +29,9 @@ const colors = {
   outline: 'rgb(190, 235, 255)',
   text: 'rgb(52, 178, 255)',
   overflow: 'rgb(255, 45, 64)',
+  poolOk: 'rgb(38, 102, 255)',
+  poolWarning: 'rgb(255, 191, 0)',
+  poolCritical: 'rgb(255, 45, 64)',
   low: 'rgb(0, 72, 145)',
   mid: 'rgb(0, 132, 220)',
   high: 'rgb(38, 186, 255)',
@@ -26,6 +43,11 @@ const bucket = {
   right: 16,
   innerLeft: 13,
   innerRight: 15,
+};
+
+const poolPixels = {
+  ph: { x: 0, y: 6 },
+  orp: { x: 1, y: 6 },
 };
 
 const digits: Record<string, string[]> = {
@@ -50,7 +72,14 @@ function displayLitersFor(liters: number) {
   return Math.min(999, Math.max(0, Math.floor(liters)));
 }
 
-function previewPixels(liters: number, wavePhase: number) {
+function poolColor(status: PoolLevel) {
+  if (status === 'ok') return colors.poolOk;
+  if (status === 'warning') return colors.poolWarning;
+  if (status === 'critical') return colors.poolCritical;
+  return null;
+}
+
+function previewPixels(liters: number, wavePhase: number, pool: PoolStatus) {
   const activeRows = activeRowsForLiters(liters);
   const displayLiters = displayLitersFor(liters);
   const textColor = liters > 999 ? colors.overflow : colors.text;
@@ -85,10 +114,15 @@ function previewPixels(liters: number, wavePhase: number) {
     }
   }
 
+  const phColor = poolColor(pool.ph.status);
+  const orpColor = poolColor(pool.orp.status);
+  if (phColor) setPixel(poolPixels.ph.x, poolPixels.ph.y, phColor);
+  if (orpColor) setPixel(poolPixels.orp.x, poolPixels.orp.y, orpColor);
+
   return pixels;
 }
 
-function WaterPreview({ liters }: { liters: number }) {
+function WaterPreview({ liters, pool }: { liters: number; pool: PoolStatus }) {
   const [wavePhase, setWavePhase] = React.useState(0);
 
   React.useEffect(() => {
@@ -98,7 +132,7 @@ function WaterPreview({ liters }: { liters: number }) {
 
   return (
     <div className="matrix-preview" aria-label={content.panel.waterAriaLabel(liters)}>
-      {previewPixels(liters, wavePhase).map((color, index) => (
+      {previewPixels(liters, wavePhase, pool).map((color, index) => (
         <span
           className={`matrix-dot${color ? ' lit' : ''}`}
           key={index}
@@ -150,6 +184,10 @@ export function App() {
     displayLiters: 0,
     overflow: false,
     activeRows: 0,
+    pool: {
+      ph: { status: null, value: null, updatedAt: null },
+      orp: { status: null, value: null, updatedAt: null },
+    },
     displayMode: 'water',
   });
   const [liters, setLiters] = React.useState(0);
@@ -208,11 +246,14 @@ export function App() {
     <main className="app-shell">
       <Navigation view={view} setView={setView} />
       <section className="status-panel">
-        <div className="status-led"><WaterPreview liters={status.liters} /></div>
+        <div className="status-led"><WaterPreview liters={status.liters} pool={status.pool} /></div>
         <div className="status-copy">
           <span className="status-kicker">{content.appName}</span>
           <h1>{status.liters}</h1>
           <p>{content.panel.statusSummary(status.activeRows, status.displayMode, status.overflow)}</p>
+          <p className="pool-summary">
+            {content.panel.poolSummary(status.pool.ph.status, status.pool.ph.value, status.pool.orp.status, status.pool.orp.value)}
+          </p>
         </div>
       </section>
 
