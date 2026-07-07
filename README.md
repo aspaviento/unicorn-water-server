@@ -187,6 +187,13 @@ Open the control panel at:
 http://<raspberry-pi-ip>:9002/
 ```
 
+## Home Assistant Integration
+
+Home Assistant can monitor the running server through the built-in REST
+integration and display the current matrix state in a Lovelace dashboard. See
+[Home Assistant integration](./docs/home-assistant.md) for package and dashboard
+YAML examples.
+
 ## Coexisting With Other Unicorn Servers
 
 Only one service should control the Unicorn HAT Mini at a time. Water Server's
