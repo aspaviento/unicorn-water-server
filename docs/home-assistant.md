@@ -48,6 +48,10 @@ rest:
 Validate and restart Home Assistant after adding the package. The sensor entity
 will be `sensor.unicorn_water_server`.
 
+`displayMode` can be `water`, `rainbow`, `standby`, or `off`. Standby is the
+intentional quiet display mode and shows a dim `HH:MM` clock on the physical
+matrix.
+
 ## Dashboard Card
 
 The visual matrix example uses
@@ -88,6 +92,7 @@ cards:
         matrix: |
           [[[
             const attrs = entity.attributes;
+            const displayMode = attrs.displayMode ?? "water";
             const liters = Number(attrs.displayLiters ?? attrs.liters ?? 0);
             const overflow = attrs.overflow === true;
             const activeRows = Math.max(0, Math.min(5, Number(attrs.activeRows ?? 0)));
@@ -102,6 +107,7 @@ cards:
               midBlue: "#0084dc",
               highBlue: "#26baff",
               foam: "#b6f4ff",
+              standby: "#80beff",
               ok: "#2666ff",
               warning: "#ffbf00",
               critical: "#ff2d40"
@@ -126,6 +132,40 @@ cards:
               if (x >= 0 && x < 17 && y >= 0 && y < 7) grid[y][x] = color;
             }
 
+            function drawDigit(digit, xOffset, color) {
+              const pattern = digits[digit];
+              for (let y = 0; y < 5; y++) {
+                for (let x = 0; x < 3; x++) {
+                  if (pattern[y][x] === "1") setPixel(xOffset + x, y + 1, color);
+                }
+              }
+            }
+
+            function renderGrid() {
+              return grid.flatMap(row =>
+                row.map(color => `<span style="
+                  width:10px;
+                  height:10px;
+                  border-radius:50%;
+                  background:${color};
+                  box-shadow:${color === colors.off ? "none" : `0 0 5px ${color}`};
+                  display:block;
+                "></span>`)
+              ).join("");
+            }
+
+            if (displayMode === "standby") {
+              const now = new Date();
+              const clock = `${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+              drawDigit(clock[0], 0, colors.standby);
+              drawDigit(clock[1], 4, colors.standby);
+              setPixel(8, 2, colors.standby);
+              setPixel(8, 4, colors.standby);
+              drawDigit(clock[2], 10, colors.standby);
+              drawDigit(clock[3], 14, colors.standby);
+              return renderGrid();
+            }
+
             const value = String(Math.trunc(liters)).padStart(3, " ").slice(-3);
             const textColor = overflow ? colors.overflow : colors.text;
 
@@ -133,14 +173,7 @@ cards:
               const digit = value[digitIndex];
               if (digit === " ") continue;
 
-              const pattern = digits[digit];
-              const xOffset = digitIndex * 4;
-
-              for (let y = 0; y < 5; y++) {
-                for (let x = 0; x < 3; x++) {
-                  if (pattern[y][x] === "1") setPixel(xOffset + x, y + 1, textColor);
-                }
-              }
+              drawDigit(digit, digitIndex * 4, textColor);
             }
 
             const bucketLeft = 12;
@@ -180,16 +213,7 @@ cards:
             if (colors[phStatus]) setPixel(0, 6, colors[phStatus]);
             if (colors[orpStatus]) setPixel(1, 6, colors[orpStatus]);
 
-            return grid.flatMap(row =>
-              row.map(color => `<span style="
-                width:10px;
-                height:10px;
-                border-radius:50%;
-                background:${color};
-                box-shadow:${color === colors.off ? "none" : `0 0 5px ${color}`};
-                display:block;
-              "></span>`)
-            ).join("");
+            return renderGrid();
           ]]]
 
   - type: entities
