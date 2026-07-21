@@ -138,14 +138,26 @@ Content-Type: application/json
 
 Both values are optional.
 
+### Show Standby Clock
+
+```http
+GET /api/standby
+```
+
+`POST /api/standby` is also accepted. Standby shows a very dim `HH:MM` clock
+ at brightness `0.05` for overnight visibility with minimal light. Repeated
+standby calls are idempotent and keep the existing standby display running.
+Any water update stops standby and restores the water display.
+
 ### Turn Off The Display
 
 ```http
 GET /api/off
 ```
 
-`POST /api/off` is also accepted. Any water update stops the rainbow or off
-state and restores the water display.
+`POST /api/off` is also accepted. This stops any animation and turns off every
+display pixel. Any water update stops the rainbow, standby, or off state and
+restores the water display.
 
 ## Installation
 
@@ -230,7 +242,7 @@ npm run build
 ```
 
 The public API is intentionally limited to `/api/`, `/api/status`,
-`/api/water`, `/api/pool`, `/api/rainbow`, and `/api/off`; solar battery,
-tariff, and busy presence endpoints are not carried over.
+`/api/water`, `/api/pool`, `/api/rainbow`, `/api/standby`, and `/api/off`;
+solar battery, tariff, and busy presence endpoints are not carried over.
 
 This project was developed with assistance from OpenAI Codex.

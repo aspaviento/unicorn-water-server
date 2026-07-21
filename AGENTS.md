@@ -52,9 +52,11 @@ npm run build
   service-conflict behavior explicit when changing install or systemd files.
 - The native display target is a 17x7 Unicorn HAT Mini layout. Do not silently
   change dimensions, rotation, overflow behavior, or display assumptions.
+- Keep `/api/standby` distinct from `/api/off`: standby is the visible dim clock
+  mode for intentional quiet periods, while off should turn off every pixel.
 - The public API is intentionally focused on water, pool indicators, rainbow,
-  status, discovery, and off behavior. Do not reintroduce solar tariff, solar
-  battery, or busy-presence endpoints unless explicitly requested.
+  standby, status, discovery, and off behavior. Do not reintroduce solar
+  tariff, solar battery, or busy-presence endpoints unless explicitly requested.
 
 ## Change Expectations
 

@@ -20,6 +20,7 @@ export const content = {
     waterSubmit: 'Update water',
     displaySection: 'Display controls',
     rainbow: 'Rainbow',
+    standby: 'Standby',
     off: 'Off',
     apiError: (message: string) => `API error: ${message}`,
   },
@@ -60,6 +61,12 @@ export const content = {
         endpoint: '/api/rainbow',
         request: '{"brightness": 1, "speed": 0.1}',
         description: 'Starts the hardware validation rainbow. Brightness and speed are optional.',
+      },
+      {
+        methods: ['GET', 'POST'],
+        endpoint: '/api/standby',
+        request: 'None',
+        description: 'Shows a very dim standby clock. Repeated calls keep the existing standby display running.',
       },
       {
         methods: ['GET', 'POST'],

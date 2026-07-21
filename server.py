@@ -28,6 +28,8 @@ LOW_BLUE = (0, 72, 145)
 MID_BLUE = (0, 132, 220)
 HIGH_BLUE = (38, 186, 255)
 FOAM = (182, 244, 255)
+STANDBY_BRIGHTNESS = 0.05
+STANDBY_COLOR = (128, 190, 255)
 
 BUCKET_LEFT = 12
 BUCKET_RIGHT = 16
@@ -193,6 +195,28 @@ def draw_number(liters, overflow=False):
                     set_pixel(x_offset + x, y + 1, color)
 
 
+def draw_digit(digit, x_offset, y_offset=1, color=STANDBY_COLOR):
+    for y, row in enumerate(DIGITS[digit]):
+        for x, cell in enumerate(row):
+            if cell == '1':
+                set_pixel(x_offset + x, y_offset + y, color)
+
+
+def draw_standby_clock(now=None):
+    current_time = now or datetime.now()
+    digits = current_time.strftime('%H%M')
+    with hardware_lock:
+        unicorn.clear()
+        unicorn.setBrightness(STANDBY_BRIGHTNESS)
+        draw_digit(digits[0], 0)
+        draw_digit(digits[1], 4)
+        set_pixel(8, 2, STANDBY_COLOR)
+        set_pixel(8, 4, STANDBY_COLOR)
+        draw_digit(digits[2], 10)
+        draw_digit(digits[3], 14)
+        unicorn.show()
+
+
 def draw_bucket(rows, wave_phase=0):
     for x in range(BUCKET_LEFT, BUCKET_RIGHT + 1):
         set_pixel(x, DISPLAY_HEIGHT - 1, OUTLINE)
@@ -285,6 +309,13 @@ def display_water_wave(speed):
         sleep_while_running(current_thread, speed)
 
 
+def display_standby_clock(refresh_seconds=15):
+    current_thread = threading.current_thread()
+    while getattr(current_thread, 'do_run', True):
+        draw_standby_clock()
+        sleep_while_running(current_thread, refresh_seconds)
+
+
 def start_rainbow(brightness=1, speed=0.1):
     global animation_thread
     stop_animation()
@@ -299,6 +330,21 @@ def start_water_display(speed=0.32):
     stop_animation()
     state['displayMode'] = 'water'
     animation_thread = threading.Thread(target=display_water_wave, args=(speed,), daemon=True)
+    animation_thread.do_run = True
+    animation_thread.start()
+
+
+def start_standby_display():
+    global animation_thread
+    if (
+        state['displayMode'] == 'standby'
+        and animation_thread is not None
+        and animation_thread.is_alive()
+    ):
+        return
+    stop_animation()
+    state['displayMode'] = 'standby'
+    animation_thread = threading.Thread(target=display_standby_clock, daemon=True)
     animation_thread.do_run = True
     animation_thread.start()
 
@@ -338,6 +384,7 @@ def api_index():
             'off': {'methods': ['GET', 'POST'], 'path': '/api/off'},
             'pool': {'methods': ['POST'], 'path': '/api/pool'},
             'rainbow': {'methods': ['POST'], 'path': '/api/rainbow'},
+            'standby': {'methods': ['GET', 'POST'], 'path': '/api/standby'},
             'status': {'methods': ['GET'], 'path': '/api/status'},
             'water': {'methods': ['POST'], 'path': '/api/water'},
         }
@@ -385,6 +432,13 @@ def api_pool():
 def api_off():
     touch('/api/off')
     switch_off()
+    return jsonify(status_payload())
+
+
+@app.route('/api/standby', methods=['GET', 'POST'])
+def api_standby():
+    touch('/api/standby')
+    start_standby_display()
     return jsonify(status_payload())
 
 
