@@ -50,7 +50,8 @@ will be `sensor.unicorn_water_server`.
 
 `displayMode` can be `water`, `rainbow`, `standby`, or `off`. Standby is the
 intentional quiet display mode and shows a dim `HH:MM` clock on the physical
-matrix.
+matrix. The dashboard card below keeps showing the normal water context while
+the entity attributes report whether the physical matrix is in standby.
 
 ## Dashboard Card
 
@@ -92,7 +93,6 @@ cards:
         matrix: |
           [[[
             const attrs = entity.attributes;
-            const displayMode = attrs.displayMode ?? "water";
             const liters = Number(attrs.displayLiters ?? attrs.liters ?? 0);
             const overflow = attrs.overflow === true;
             const activeRows = Math.max(0, Math.min(5, Number(attrs.activeRows ?? 0)));
@@ -107,7 +107,6 @@ cards:
               midBlue: "#0084dc",
               highBlue: "#26baff",
               foam: "#b6f4ff",
-              standby: "#80beff",
               ok: "#2666ff",
               warning: "#ffbf00",
               critical: "#ff2d40"
@@ -152,18 +151,6 @@ cards:
                   display:block;
                 "></span>`)
               ).join("");
-            }
-
-            if (displayMode === "standby") {
-              const now = new Date();
-              const clock = `${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
-              drawDigit(clock[0], 0, colors.standby);
-              drawDigit(clock[1], 4, colors.standby);
-              setPixel(8, 2, colors.standby);
-              setPixel(8, 4, colors.standby);
-              drawDigit(clock[2], 10, colors.standby);
-              drawDigit(clock[3], 14, colors.standby);
-              return renderGrid();
             }
 
             const value = String(Math.trunc(liters)).padStart(3, " ").slice(-3);
