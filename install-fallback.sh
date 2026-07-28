@@ -5,7 +5,8 @@ set -e
 INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
 INSTALL_USER="${SUDO_USER:-$USER}"
 INSTALL_GROUP="$(id -gn "$INSTALL_USER")"
-VENV_DIR="${VENV_DIR:-/home/$INSTALL_USER/.env}"
+USER_HOME="$(getent passwd "$INSTALL_USER" | cut -d: -f6)"
+VENV_DIR="${VENV_DIR:-${USER_HOME:-/home/$INSTALL_USER}/.env}"
 
 sudo apt-get install -y python3-pip python3-dev python3-venv
 if [ ! -d "$VENV_DIR" ]; then

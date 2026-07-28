@@ -110,7 +110,8 @@ while [ "$1" != "" ]; do
 done
 
 if [ -z "$VENV_DIR" ]; then
-    VENV_DIR="/home/$INSTALL_USER/.env"
+    USER_HOME=$(getent passwd "$INSTALL_USER" | cut -d: -f6)
+    VENV_DIR="${USER_HOME:-/home/$INSTALL_USER}/.env"
 fi
 INSTALL_GROUP=$(id -gn "$INSTALL_USER")
 

@@ -1,6 +1,9 @@
+import os
 import unittest
 from datetime import datetime
 from unittest.mock import patch
+
+os.environ['UNICORN_FORCE_DUMMY'] = '1'
 
 import server
 from lib import unicorn_wrapper
