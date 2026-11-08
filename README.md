@@ -22,12 +22,12 @@ The project provides:
 
 ## Credits and project lineage
 
-Alberto Pizarro Carrasco developed Unicorn Water Server to display daily
+This project was developed to display daily
 household water consumption and pool chemistry indicators on the Unicorn
 HAT Mini, with an API for external monitoring tools.
 
 The project reuses the Flask/Vite structure and hardware wrapper from
-[Alberto's Unicorn Solar Server](https://github.com/aspaviento/unicorn-solar-server)
+[Unicorn Solar Server](https://github.com/aspaviento/unicorn-solar-server)
 and [Unicorn Busy Server](https://github.com/aspaviento/unicorn-busy-server),
 based on [Elio Struyf's original Unicorn Busy Server](https://github.com/estruyf/unicorn-busy-server).
 Development was assisted by OpenAI Codex.
