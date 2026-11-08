@@ -20,14 +20,17 @@ The project provides:
 - A startup rainbow that confirms the Unicorn HAT Mini is working before the
   first water update arrives.
 
-## Project Lineage
+## Credits and project lineage
 
-Unicorn Water Server is derived from `unicorn-solar-server`, which is derived
-from `unicorn-busy-server`.
+Alberto Pizarro Carrasco developed Unicorn Water Server to display daily
+household water consumption and pool chemistry indicators on the Unicorn
+HAT Mini, with an API for external monitoring tools.
 
-The derived project reuses the Flask/Vite structure and Unicorn hardware
-wrapper, but replaces the solar battery display with a water-consumption
-display and a focused API.
+The project reuses the Flask/Vite structure and hardware wrapper from
+[Alberto's Unicorn Solar Server](https://github.com/aspaviento/unicorn-solar-server)
+and [Unicorn Busy Server](https://github.com/aspaviento/unicorn-busy-server),
+based on [Elio Struyf's original Unicorn Busy Server](https://github.com/estruyf/unicorn-busy-server).
+Development was assisted by OpenAI Codex.
 
 ## Display
 
@@ -323,5 +326,3 @@ npm run build
 The public API is intentionally limited to `/api/`, `/api/status`,
 `/api/water`, `/api/pool`, `/api/connectivity`, `/api/rainbow`, `/api/standby`, and `/api/off`;
 solar battery, tariff, and busy presence endpoints are not carried over.
-
-This project was developed with assistance from OpenAI Codex.

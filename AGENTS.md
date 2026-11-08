@@ -39,13 +39,9 @@ npm ci
 npm run build
 ```
 
-## Operating Rules
+## Development Guidelines
 
-- Keep this repository public-safe. Do not add private hostnames, private paths,
-  tokens, cron entries, local network details, or home deployment notes.
-- Do not assume the service is currently deployed or running anywhere. Verify
-  live deployment state outside this public repository before operational work.
-- Keep private operation notes in a private location outside this repo.
+- Use synthetic data and generic settings in documentation and examples.
 - Preserve the public service identity documented here: `unicorn-water.service`
   and default HTTP port `9002`.
 - Only one Unicorn HAT Mini service should control the hardware at a time; keep
@@ -64,6 +60,3 @@ npm run build
   breaking change.
 - Update README or public docs when public API, install behavior, or display
   behavior changes.
-- For deployment-sensitive changes, propose and validate locally first; do not
-  restart remote services or change private cron jobs from this repo context
-  without explicit live-operation instructions.
