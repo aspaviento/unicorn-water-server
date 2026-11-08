@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.1.0] - 2026-11-08
+
+### Added
+
+- Loopback-only `POST /api/connectivity` for local watchdog reports and a
+  `connectivity` field in the status API.
+- A steady connectivity pixel in the top-left corner of the daytime matrix
+  and standby clock. Green shows gateway reachability, orange shows a retry
+  or recovery in progress, and red shows failed recovery.
+- Home Assistant REST sensor and dashboard examples for the connectivity pixel.
+
 ## [1.0.0] - 2026-10-25
 
 First tagged release of Unicorn Water Server, collecting the functionality
@@ -34,3 +45,5 @@ README deployment guidance to update runtime files deliberately, and restart
 the service when updating server code, dependencies, or its systemd unit.
 
 [1.0.0]: https://github.com/aspaviento/unicorn-water-server/releases/tag/v1.0.0
+
+[1.1.0]: https://github.com/aspaviento/unicorn-water-server/releases/tag/v1.1.0

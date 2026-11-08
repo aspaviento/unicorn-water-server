@@ -3,7 +3,7 @@
 ## Supported versions
 
 Security fixes target the latest published release of Unicorn Water Server.
-At publication of this policy, that release is **v1.0.0**. Older releases do
+At publication of this policy, that release is **v1.1.0**. Older releases do
 not receive separate security backports. Reports affecting development code
 are welcome; reproduce against the latest release where practical.
 

@@ -3,6 +3,7 @@
 Display daily domestic water consumption on a Raspberry Pi with a Pimoroni
 Unicorn HAT Mini.
 
+Current release: [v1.1.0](https://github.com/aspaviento/unicorn-water-server/releases/tag/v1.1.0).
 See the [changelog](./CHANGELOG.md) for release history and the
 [security policy](./SECURITY.md) for supported versions and private reporting.
 
@@ -53,6 +54,10 @@ cannot be silently cropped or rotated.
 - Small bright pixels at the surface shift between frames to create a subtle
   ripple.
 
+The top-left pixel shows the latest local connectivity report.
+
+![Water matrix with a green connectivity pixel above the litre reading and pool indicators](assets/connectivity-display.png)
+
 | Daily litres | Active rows |
 |---:|---:|
 | `0` | 0 |
@@ -79,6 +84,32 @@ Boundary values are included in the less severe band. For example, pH `7.2`
 and `7.6` are `ok`; ORP `650` and `750` are `ok`.
 
 ## API
+
+### Report local connectivity
+
+```http
+POST /api/connectivity
+Content-Type: application/json
+
+{"state": "connected"}
+```
+
+Call this endpoint over loopback from a connectivity monitor on the same host.
+The pixel in the top-left corner is visible in the daytime view and standby
+clock. It stays steadily lit according to the reported state.
+
+| State | Pixel | Meaning |
+| --- | --- | --- |
+| `connected` | Green | The monitor can reach the local gateway. |
+| `waiting_retry` | Orange | A check failed and the monitor is waiting to retry. |
+| `recovering` | Orange | Recovery is in progress. |
+| `disconnected` | Red | Recovery ended without restoring connectivity. |
+
+The endpoint returns the current status. The `connectivity` field in that
+response and in `GET /api/status` contains `state` and the UTC receipt time
+`updatedAt`. After startup, the state is `unknown` and the pixel stays dark
+until the first report. Updates preserve the display mode, including off and
+rainbow.
 
 ### Update Water Consumption
 
@@ -290,7 +321,7 @@ npm run build
 ```
 
 The public API is intentionally limited to `/api/`, `/api/status`,
-`/api/water`, `/api/pool`, `/api/rainbow`, `/api/standby`, and `/api/off`;
+`/api/water`, `/api/pool`, `/api/connectivity`, `/api/rainbow`, `/api/standby`, and `/api/off`;
 solar battery, tariff, and busy presence endpoints are not carried over.
 
 This project was developed with assistance from OpenAI Codex.

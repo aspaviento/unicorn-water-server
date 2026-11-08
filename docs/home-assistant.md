@@ -32,6 +32,7 @@ rest:
         value_template: "running"
         json_attributes:
           - activeRows
+          - connectivity
           - displayLiters
           - displayMode
           - height
@@ -52,6 +53,14 @@ will be `sensor.unicorn_water_server`.
 intentional quiet display mode and shows a dim `HH:MM` clock on the physical
 matrix. The dashboard card below keeps showing the normal water context while
 the entity attributes report whether the physical matrix is in standby.
+
+`connectivity` reports the last local watchdog result and its UTC receipt time
+(`updatedAt`). In the example card, the top-left pixel is green for
+`connected`, orange for `waiting_retry` or `recovering`, and red for
+`disconnected`. It stays dark when the attribute is missing or the server
+has yet to receive a report. The REST sensor's availability separately
+indicates whether Home Assistant can reach the server. If it is unreachable,
+the conditional matrix is hidden.
 
 ## Dashboard Card
 
@@ -97,6 +106,13 @@ cards:
             const overflow = attrs.overflow === true;
             const activeRows = Math.max(0, Math.min(5, Number(attrs.activeRows ?? 0)));
             const pool = attrs.pool ?? {};
+
+            const connectivityColors = {
+              connected: "#00b450",
+              waiting_retry: "#ff7800",
+              recovering: "#ff7800",
+              disconnected: "#ff2d32"
+            };
 
             const colors = {
               off: "#202837",
@@ -199,6 +215,8 @@ cards:
 
             if (colors[phStatus]) setPixel(0, 6, colors[phStatus]);
             if (colors[orpStatus]) setPixel(1, 6, colors[orpStatus]);
+
+            setPixel(0, 0, connectivityColors[attrs.connectivity?.state] ?? colors.off);
 
             return renderGrid();
           ]]]

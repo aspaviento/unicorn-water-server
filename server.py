@@ -28,6 +28,12 @@ LOW_BLUE = (0, 72, 145)
 MID_BLUE = (0, 132, 220)
 HIGH_BLUE = (38, 186, 255)
 FOAM = (182, 244, 255)
+CONNECTIVITY_COLORS = {
+    'connected': (0, 180, 80),
+    'waiting_retry': (255, 120, 0),
+    'recovering': (255, 120, 0),
+    'disconnected': (255, 45, 50),
+}
 STANDBY_BRIGHTNESS = 0.05
 STANDBY_COLOR = (128, 190, 255)
 
@@ -69,6 +75,7 @@ if (width, height) != (DISPLAY_WIDTH, DISPLAY_HEIGHT):
     )
 
 state = {
+    'connectivity': {'state': 'unknown', 'updatedAt': None},
     'liters': 0,
     'displayLiters': 0,
     'overflow': False,
@@ -202,6 +209,12 @@ def draw_digit(digit, x_offset, y_offset=1, color=STANDBY_COLOR):
                 set_pixel(x_offset + x, y_offset + y, color)
 
 
+def draw_connectivity():
+    color = CONNECTIVITY_COLORS.get(state['connectivity']['state'])
+    if color is not None:
+        set_pixel(0, 0, color)
+
+
 def draw_standby_clock(now=None):
     current_time = now or datetime.now()
     digits = current_time.strftime('%H%M')
@@ -214,6 +227,7 @@ def draw_standby_clock(now=None):
         set_pixel(8, 4, STANDBY_COLOR)
         draw_digit(digits[2], 10)
         draw_digit(digits[3], 14)
+        draw_connectivity()
         unicorn.show()
 
 
@@ -257,6 +271,7 @@ def render_display(wave_phase=0):
         draw_number(state['displayLiters'], state['overflow'])
         draw_bucket(state['activeRows'], wave_phase)
         draw_pool_status()
+        draw_connectivity()
         unicorn.show()
 
 
@@ -381,6 +396,7 @@ def root():
 def api_index():
     return jsonify({
         'endpoints': {
+            'connectivity': {'methods': ['POST'], 'path': '/api/connectivity'},
             'off': {'methods': ['GET', 'POST'], 'path': '/api/off'},
             'pool': {'methods': ['POST'], 'path': '/api/pool'},
             'rainbow': {'methods': ['POST'], 'path': '/api/rainbow'},
@@ -455,6 +471,30 @@ def api_rainbow():
         return make_response(jsonify({'error': error}), 400)
     touch('/api/rainbow')
     start_rainbow(brightness, speed)
+    return jsonify(status_payload())
+
+
+@app.route('/api/connectivity', methods=['POST'])
+def api_connectivity():
+    if request.remote_addr not in ('127.0.0.1', '::1'):
+        return jsonify({'error': 'Connectivity updates are local only'}), 403
+
+    content, error_response = read_json_body()
+    if error_response is not None:
+        return error_response
+    connectivity = content.get('state')
+    if not isinstance(connectivity, str) or connectivity not in CONNECTIVITY_COLORS:
+        return jsonify({'error': 'Invalid connectivity state'}), 400
+
+    with hardware_lock:
+        state['connectivity'] = {
+            'state': connectivity,
+            'updatedAt': datetime.now(timezone.utc).isoformat(),
+        }
+        if state['displayMode'] == 'standby':
+            draw_standby_clock()
+        elif state['displayMode'] == 'water':
+            render_display()
     return jsonify(status_payload())
 
 
