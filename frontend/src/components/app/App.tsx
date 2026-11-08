@@ -8,6 +8,7 @@ type WaterStatus = {
   overflow: boolean;
   activeRows: number;
   pool: PoolStatus;
+  connectivity?: { state: string };
   displayMode: 'water' | 'rainbow' | 'standby' | 'off';
 };
 
@@ -36,6 +37,13 @@ const colors = {
   mid: 'rgb(0, 132, 220)',
   high: 'rgb(38, 186, 255)',
   foam: 'rgb(182, 244, 255)',
+};
+
+const connectivityColors: Partial<Record<string, string>> = {
+  connected: 'rgb(0, 180, 80)',
+  waiting_retry: 'rgb(255, 120, 0)',
+  recovering: 'rgb(255, 120, 0)',
+  disconnected: 'rgb(255, 45, 50)',
 };
 
 const bucket = {
@@ -79,7 +87,9 @@ function poolColor(status: PoolLevel) {
   return null;
 }
 
-function previewPixels(liters: number, wavePhase: number, pool: PoolStatus) {
+type WaterPreviewStatus = Pick<WaterStatus, 'liters' | 'pool' | 'connectivity'>;
+
+function previewPixels({ liters, pool, connectivity }: WaterPreviewStatus, wavePhase: number) {
   const activeRows = activeRowsForLiters(liters);
   const displayLiters = displayLitersFor(liters);
   const textColor = liters > 999 ? colors.overflow : colors.text;
@@ -102,8 +112,6 @@ function previewPixels(liters: number, wavePhase: number, pool: PoolStatus) {
     setPixel(bucket.right, y, colors.outline);
   }
 
-  if (activeRows === 0) return pixels;
-
   const surfaceY = 6 - activeRows;
   for (let x = bucket.innerLeft; x <= bucket.innerRight; x += 1) {
     for (let y = 5; y >= surfaceY; y -= 1) {
@@ -119,10 +127,13 @@ function previewPixels(liters: number, wavePhase: number, pool: PoolStatus) {
   if (phColor) setPixel(poolPixels.ph.x, poolPixels.ph.y, phColor);
   if (orpColor) setPixel(poolPixels.orp.x, poolPixels.orp.y, orpColor);
 
+  const connectivityColor = connectivityColors[connectivity?.state ?? 'unknown'];
+  if (connectivityColor) setPixel(0, 0, connectivityColor);
+
   return pixels;
 }
 
-function WaterPreview({ liters, pool }: { liters: number; pool: PoolStatus }) {
+function WaterPreview({ status }: { status: WaterPreviewStatus }) {
   const [wavePhase, setWavePhase] = React.useState(0);
 
   React.useEffect(() => {
@@ -131,8 +142,8 @@ function WaterPreview({ liters, pool }: { liters: number; pool: PoolStatus }) {
   }, []);
 
   return (
-    <div className="matrix-preview" aria-label={content.panel.waterAriaLabel(liters)}>
-      {previewPixels(liters, wavePhase, pool).map((color, index) => (
+    <div className="matrix-preview" aria-label={content.panel.waterAriaLabel(status.liters)}>
+      {previewPixels(status, wavePhase).map((color, index) => (
         <span
           className={`matrix-dot${color ? ' lit' : ''}`}
           key={index}
@@ -200,12 +211,26 @@ export function App() {
     setLiters(nextStatus.liters);
   }, []);
 
+  const initialized = React.useRef(false);
   const refresh = React.useCallback(async () => {
     const response = await fetch('/api/status');
-    if (response.ok) applyStatus(await response.json());
+    if (!response.ok) return;
+    const nextStatus = await response.json();
+    if (!initialized.current) {
+      applyStatus(nextStatus);
+      initialized.current = true;
+    } else {
+      // Keep a pending manual litre value while refreshing the preview.
+      setStatus(nextStatus);
+    }
   }, [applyStatus]);
 
-  React.useEffect(() => { refresh(); }, [refresh]);
+  React.useEffect(() => {
+    const poll = () => { refresh().catch(() => {}); };
+    poll();
+    const timer = window.setInterval(poll, 5000);
+    return () => window.clearInterval(timer);
+  }, [refresh]);
   React.useEffect(() => {
     const handleHashChange = () => setView(window.location.hash === '#api-docs' ? 'docs' : 'home');
     window.addEventListener('hashchange', handleHashChange);
@@ -246,7 +271,7 @@ export function App() {
     <main className="app-shell">
       <Navigation view={view} setView={setView} />
       <section className="status-panel">
-        <div className="status-led"><WaterPreview liters={status.liters} pool={status.pool} /></div>
+        <div className="status-led"><WaterPreview status={status} /></div>
         <div className="status-copy">
           <span className="status-kicker">{content.appName}</span>
           <h1>{status.liters}</h1>

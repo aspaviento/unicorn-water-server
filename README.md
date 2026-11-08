@@ -57,7 +57,10 @@ cannot be silently cropped or rotated.
 - Small bright pixels at the surface shift between frames to create a subtle
   ripple.
 
-The top-left pixel shows the latest local connectivity report.
+The top-left pixel shows the latest local connectivity report. The web panel
+refreshes the indicator automatically, and the
+[Home Assistant example](docs/home-assistant.md) shows the same colors.
+The panel screenshot and matrix example use sample data.
 
 ![Water matrix with a green connectivity pixel above the litre reading and pool indicators](assets/connectivity-display.png)
 

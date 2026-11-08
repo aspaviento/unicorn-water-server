@@ -51,10 +51,16 @@ export const content = {
         description: 'Updates pool chemistry indicators. pH uses the lower-left pixel and ORP uses the next pixel. Status accepts ok, warning, critical, or null.',
       },
       {
+        methods: ['POST'],
+        endpoint: '/api/connectivity',
+        request: '{"state":"connected"}',
+        description: 'Accepts local watchdog updates. The upper-left pixel shows connected (green), waiting_retry or recovering (orange), and disconnected (red).',
+      },
+      {
         methods: ['GET'],
         endpoint: '/api/status',
         request: 'None',
-        description: 'Returns litres, displayed litres, overflow state, pool indicators, active bucket rows, display dimensions, rotation, hardware type, and last update information.',
+        description: 'Returns litres, displayed litres, overflow state, pool indicators, connectivity, active bucket rows, display dimensions, rotation, hardware type, and last update information.',
       },
       {
         methods: ['POST'],
